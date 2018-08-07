@@ -1,27 +1,73 @@
 {
-    "Type" : "AWS::CodeBuild::Project",
-    "Properties" : {
-      "Artifacts" : [],
-      "BadgeEnabled" : false,
-      "Environment" : {
-        "ComputeType" : "BUILD_GENERAL1_SMALL",
-        "Image" : "aws/codebuild/nodejs:8.11.0",
-        "Type" : "LINUX_CONTAINER"
+  "Resources": {
+    "IAMRCODEBUILD": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "codebuild.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "RoleName": "thinkadi_codebuild_role",
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/AmazonS3FullAccess",
+          "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+        ]
+      }
+    },
+    "S3BLCBArtifacts": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": "thinkadi-lcb-artifacts",
+        "AccessControl": "Private"
+      }
+    },
+    "CBPLEARN": {
+      "Type": "AWS::CodeBuild::Project",
+      "Properties": {
+        "Artifacts": {
+          "Location": {
+            "Ref":"S3BLCBArtifacts"
+          },
+          "Name": "lcb.zip",
+          "NamespaceType": "BUILD_ID",
+          "Packaging": "ZIP",
+          "Path": "lcb",
+          "Type": "S3"
+        },
+        "BadgeEnabled": false,
+        "Environment": {
+          "ComputeType": "BUILD_GENERAL1_SMALL",
+          "Image": "aws/codebuild/nodejs:8.11.0",
+          "Type": "LINUX_CONTAINER"
+        },
+        "Name": "LearnCodeBuild",
+        "ServiceRole": {
+          "Ref": "IAMRCODEBUILD"
+        },
+        "Source": {
+          "Auth": {
+            "Type":"OAUTH",
+            "Resource":""
+          },
+          "Location": "https://github.com/thinkadi/learn-code-build-code.git",
+          "Type": "GITHUB"
+        }
       },
-      "Name" : "LearnCodeBuild",
-      "ServiceRole" : "",
-      "Source" : {
-        "Auth" : SourceAuth,
-        "BuildSpec" : String,
-        "GitCloneDepth" : Integer,
-        "InsecureSsl" : Boolean,
-        "Location" : String,
-        "ReportBuildStatus" : Boolean,
-        "Type" : "GITHUB"
-      },
-      "Tags" : [ Resource Tag, ... ],
-      "TimeoutInMinutes" : Integer,
-      "Triggers" : Triggers,
-      "VpcConfig" : VpcConfig
+      "DependsOn": [
+        "IAMRCODEBUILD"
+      ]
     }
   }
+}
